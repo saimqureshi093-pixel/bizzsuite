@@ -26,6 +26,7 @@ BizzSuite is a web-based business management app built for handling day-to-day s
 - Zustand for client-side state
 - React Router and Recharts
 - vite-plugin-pwa for the web app manifest and service worker
+- Capacitor for Android packaging
 
 ## Setup
 
@@ -69,20 +70,38 @@ npm run typecheck  # Run the TypeScript app type check
 
 ## Build an Android APK
 
-BizzSuite is configured as a PWA, not as a native Android project. To package the deployed PWA as an Android Trusted Web Activity (TWA), use Bubblewrap. The resulting APK opens the hosted BizzSuite site; it does not bundle a separate native implementation.
+BizzSuite uses Capacitor to package the Vite web app in a native Android project. Android Studio and its Android SDK are required; install a compatible JDK (Java 17 is recommended) and configure the SDK in Android Studio.
 
-### Requirements
+The app configuration is in `capacitor.config.ts`:
 
-- Deploy BizzSuite to a public HTTPS domain
-- Install Node.js, Java 17, and the Android SDK (including build-tools)
-- Configure the Android SDK environment for your shell
+```ts
+import type { CapacitorConfig } from '@capacitor/cli';
 
-Build the web app and deploy the contents of `dist/` to your HTTPS host first. Then install Bubblewrap and initialize it from the deployed PWA manifest:
+const config: CapacitorConfig = {
+   appId: 'com.bizzsuite.app',
+   appName: 'BizzSuite',
+   webDir: 'dist',
+};
 
-```sh
-npm install --global @bubblewrap/cli
-bubblewrap init --manifest https://your-domain.example/manifest.webmanifest
-bubblewrap build
+export default config;
 ```
 
-Follow Bubblewrap's prompts to configure the Android application ID and signing key. Set up Digital Asset Links for your domain by publishing the generated `assetlinks.json` at `https://your-domain.example/.well-known/assetlinks.json`; the TWA needs this domain association to display without browser controls. Bubblewrap reports the generated APK location when the build completes. Keep signing keys private and do not commit them.
+Install Capacitor packages once, then build the web app, create the Android project, and sync the web assets:
+
+```sh
+npm install @capacitor/core @capacitor/cli @capacitor/android
+npm run build
+npx cap add android
+npx cap sync
+npx cap open android
+```
+
+In Android Studio, wait for Gradle sync to finish, then choose **Build > Build Bundle(s) / APK(s) > Build APK(s)**. The debug APK is saved at:
+
+```text
+android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+For a signed release, choose **Build > Generate Signed Bundle / APK**, select **APK**, and follow the signing wizard. The release APK is typically saved under `android/app/build/outputs/apk/release/`. Keep the keystore and passwords private and out of source control.
+
+After changing the web app, run `npm run build` and `npx cap sync` again before building in Android Studio.

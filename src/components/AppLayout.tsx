@@ -41,8 +41,9 @@ const navItems = [
 export function AppLayout({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [manualInstallOpen, setManualInstallOpen] = useState(false);
   const online = useOnlineStatus();
-  const { canInstall, promptInstall } = usePWAInstall();
+  const { canInstall, canShowManualInstructions, promptInstall } = usePWAInstall();
   const { user, profile, signOut } = useAuth();
   const { addToast } = useUIStore();
   const navigate = useNavigate();
@@ -188,6 +189,16 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 <span className="text-xs font-medium hidden sm:inline">Install App</span>
               </button>
             )}
+            {!canInstall && canShowManualInstructions && (
+              <button
+                onClick={() => setManualInstallOpen(true)}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
+                aria-label="Add to Home Screen"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span className="text-xs font-medium hidden sm:inline">Add to Home Screen</span>
+              </button>
+            )}
 
             <ThemeToggle />
 
@@ -238,6 +249,48 @@ export function AppLayout({ children }: { children: ReactNode }) {
         {/* Page content */}
         <main className="flex-1 p-4 lg:p-6 overflow-x-hidden">{children}</main>
       </div>
+      {manualInstallOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="presentation">
+          <button
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setManualInstallOpen(false)}
+            aria-label="Close install instructions"
+          />
+          <section
+            className="relative w-full max-w-sm rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shadow-xl p-6"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="manual-install-title"
+          >
+            <button
+              onClick={() => setManualInstallOpen(false)}
+              className="absolute top-4 right-4 p-1 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
+              aria-label="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <h2 id="manual-install-title" className="text-lg font-semibold text-neutral-900 dark:text-white pr-8">
+              Add BizzSuite to your home screen
+            </h2>
+            <p className="mt-3 text-sm text-neutral-600 dark:text-neutral-400">
+              {/iPhone|iPad|iPod/i.test(navigator.userAgent)
+                ? 'In Safari, tap Share, then choose Add to Home Screen.'
+                : /Android/i.test(navigator.userAgent)
+                  ? 'In Chrome, open the menu, then choose Install app or Add to Home screen.'
+                  : 'Open your browser menu and choose Install app or Add to Home screen.'}
+            </p>
+            <p className="mt-3 text-xs text-neutral-500 dark:text-neutral-500">
+              If that option is unavailable, open this site in a supported browser over HTTPS.
+            </p>
+            <button
+              onClick={() => setManualInstallOpen(false)}
+              className="mt-5 w-full rounded-lg bg-neutral-900 dark:bg-white px-4 py-2.5 text-sm font-medium text-white dark:text-neutral-900 hover:opacity-90"
+            >
+              Done
+            </button>
+          </section>
+        </div>
+      )}
     </div>
   );
 }

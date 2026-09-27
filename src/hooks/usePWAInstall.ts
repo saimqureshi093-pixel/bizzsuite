@@ -12,6 +12,7 @@ export function usePWAInstall() {
   useEffect(() => {
     const handler = (e: Event) => {
       e.preventDefault();
+      console.log('[PWA] beforeinstallprompt fired');
       setInstallPromptEvent(e as BeforeInstallPromptEvent);
     };
 
@@ -42,6 +43,7 @@ export function usePWAInstall() {
 
   return {
     canInstall: !!installPromptEvent && !installed,
+    canShowManualInstructions: !installPromptEvent && !installed,
     promptInstall,
   };
 }
