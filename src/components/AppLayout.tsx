@@ -65,11 +65,18 @@ export function AppLayout({ children }: { children: ReactNode }) {
     navigate('/login');
   };
 
-  const handleInstallClick = async () => {
-    const outcome = await promptInstall();
-    if (outcome === null) {
+  const handleInstallClick = () => {
+    const installResult = promptInstall();
+    if (!installResult) {
       setManualInstallOpen(true);
+      return;
     }
+
+    void installResult.then((outcome) => {
+      if (outcome === 'accepted') {
+        addToast('App installed successfully', 'success');
+      }
+    });
   };
 
   const displayName = profile?.full_name ?? user?.email ?? 'User';
