@@ -43,7 +43,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [manualInstallOpen, setManualInstallOpen] = useState(false);
   const online = useOnlineStatus();
-  const { canInstall, canShowManualInstructions, promptInstall } = usePWAInstall();
+  const { canInstall, promptInstall } = usePWAInstall();
   const { user, profile, signOut } = useAuth();
   const { addToast } = useUIStore();
   const navigate = useNavigate();
@@ -63,6 +63,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
     await signOut();
     addToast('Signed out successfully', 'info');
     navigate('/login');
+  };
+
+  const handleInstallClick = async () => {
+    const outcome = await promptInstall();
+    if (outcome === null) {
+      setManualInstallOpen(true);
+    }
   };
 
   const displayName = profile?.full_name ?? user?.email ?? 'User';
@@ -179,26 +186,18 @@ export function AppLayout({ children }: { children: ReactNode }) {
             </div>
 
             {/* Install App button */}
-            {canInstall && (
-              <button
-                onClick={promptInstall}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors"
-                aria-label="Install app"
-              >
+            <button
+              onClick={handleInstallClick}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-colors ${
+                canInstall
+                  ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-500/20'
+                  : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700'
+              }`}
+              aria-label="Install app"
+            >
                 <Download className="w-3.5 h-3.5" />
-                <span className="text-xs font-medium hidden sm:inline">Install App</span>
-              </button>
-            )}
-            {!canInstall && canShowManualInstructions && (
-              <button
-                onClick={() => setManualInstallOpen(true)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors"
-                aria-label="Add to Home Screen"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span className="text-xs font-medium hidden sm:inline">Add to Home Screen</span>
-              </button>
-            )}
+              <span className="text-xs font-medium hidden sm:inline">Install App</span>
+            </button>
 
             <ThemeToggle />
 
@@ -270,17 +269,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
               <X className="w-5 h-5" />
             </button>
             <h2 id="manual-install-title" className="text-lg font-semibold text-neutral-900 dark:text-white pr-8">
-              Add BizzSuite to your home screen
+              Install BizzSuite
             </h2>
             <p className="mt-3 text-sm text-neutral-600 dark:text-neutral-400">
-              {/iPhone|iPad|iPod/i.test(navigator.userAgent)
-                ? 'In Safari, tap Share, then choose Add to Home Screen.'
-                : /Android/i.test(navigator.userAgent)
-                  ? 'In Chrome, open the menu, then choose Install app or Add to Home screen.'
-                  : 'Open your browser menu and choose Install app or Add to Home screen.'}
-            </p>
-            <p className="mt-3 text-xs text-neutral-500 dark:text-neutral-500">
-              If that option is unavailable, open this site in a supported browser over HTTPS.
+              To install: tap the Chrome menu (3 dots), then choose Install app or Add to Home Screen.
             </p>
             <button
               onClick={() => setManualInstallOpen(false)}

@@ -5,45 +5,61 @@ type BeforeInstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 };
 
+let deferredPrompt: BeforeInstallPromptEvent | null = null;
+const promptSubscribers = new Set<() => void>();
+
+const notifyPromptSubscribers = () => {
+  promptSubscribers.forEach((subscriber) => subscriber());
+};
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeinstallprompt', (event: Event) => {
+    event.preventDefault();
+    console.log('[PWA] beforeinstallprompt fired');
+    deferredPrompt = event as BeforeInstallPromptEvent;
+    notifyPromptSubscribers();
+  });
+
+  window.addEventListener('appinstalled', () => {
+    deferredPrompt = null;
+    notifyPromptSubscribers();
+  });
+}
+
 export function usePWAInstall() {
-  const [installPromptEvent, setInstallPromptEvent] = useState<BeforeInstallPromptEvent | null>(null);
-  const [installed, setInstalled] = useState(false);
+  const [installPromptEvent, setInstallPromptEvent] = useState(deferredPrompt);
 
   useEffect(() => {
-    const handler = (e: Event) => {
-      e.preventDefault();
-      console.log('[PWA] beforeinstallprompt fired');
-      setInstallPromptEvent(e as BeforeInstallPromptEvent);
-    };
-
-    const installedHandler = () => {
-      setInstalled(true);
-      setInstallPromptEvent(null);
-    };
-
-    window.addEventListener('beforeinstallprompt', handler);
-    window.addEventListener('appinstalled', installedHandler);
-
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-      setInstalled(true);
-    }
+    const syncPrompt = () => setInstallPromptEvent(deferredPrompt);
+    promptSubscribers.add(syncPrompt);
+    syncPrompt();
 
     return () => {
-      window.removeEventListener('beforeinstallprompt', handler);
-      window.removeEventListener('appinstalled', installedHandler);
+      promptSubscribers.delete(syncPrompt);
     };
   }, []);
 
-  const promptInstall = async () => {
-    if (!installPromptEvent) return;
-    await installPromptEvent.prompt();
-    await installPromptEvent.userChoice;
-    setInstallPromptEvent(null);
+  const promptInstall = async (): Promise<'accepted' | 'dismissed' | null> => {
+    const prompt = deferredPrompt;
+    if (!prompt) return null;
+
+    try {
+      await prompt.prompt();
+      const { outcome } = await prompt.userChoice;
+      return outcome;
+    } catch (error) {
+      console.error('[PWA] Install prompt failed', error);
+      return null;
+    } finally {
+      if (deferredPrompt === prompt) {
+        deferredPrompt = null;
+      }
+      notifyPromptSubscribers();
+    }
   };
 
   return {
-    canInstall: !!installPromptEvent && !installed,
-    canShowManualInstructions: !installPromptEvent && !installed,
+    canInstall: !!installPromptEvent,
     promptInstall,
   };
 }
